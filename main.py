@@ -1,5 +1,5 @@
 import argparse
-from scrapers.scrap_AT import run_parallel_scraping
+from scrapers.run_parallel_scraping import run_parallel_scraping
 from scrapers.scrap_DK import scrape_b2b_leads_DK
 from scrapers.save_leads import save_leads_to_csv
 import time
@@ -17,19 +17,13 @@ def main():
     #     "DK": scrape_b2b_leads_DK,
     # }
     start_time = time.time()
-    run_parallel_scraping(args.industry, 6, 10)
+    # scrape_b2b_leads_DK(args.industry)
+    run_parallel_scraping(args.industry)
     end_time = time.time()
-    total_seconds = int(end_time - start_time)  # total time in seconds
+    total_seconds = int(end_time - start_time)  
     # Format seconds into HH:MM:SS
     formatted_time = str(datetime.timedelta(seconds=total_seconds))
     print(f"Scraping completed in {formatted_time}.")
-    # save_leads_to_csv(companies, emails, args.industry, args.country)
-    # Run the scraper with the provided country and industry
-    # if(scrappers_map[args.country]):
-    #     emails, companies = scrappers_map[args.country](args.industry)
-    #     save_leads_to_csv(emails, companies, args.industry, args.country)
-    # else:
-    #     raise ValueError(f"Country {args.country} is not supported for this script.")
 
 if __name__ == "__main__":
     main()

@@ -1,16 +1,16 @@
-from concurrent.futures import ThreadPoolExecutor
 from playwright.sync_api import sync_playwright
 from scrapers.save_leads import save_leads_to_csv
+import re
 
-def scrape_b2b_leads_AT(industry, start_page, max_pages, batch_size=30):
-    url = f"https://www.herold.at/gelbe-seiten/{industry}/seite/{start_page}/"
-
+def scrape_b2b_leads_AT(industry):
+    batch_size = 5
+    url = f"https://www.herold.at/gelbe-seiten/{industry}/seite/1/"
     companies = []
     emails = []
-    current_page = start_page
+    current_page = 1
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)  
+        browser = p.chromium.launch(headless=False)  
         context = browser.new_context(viewport={"width": 800, "height": 768})
         page = context.new_page()
 
@@ -20,7 +20,13 @@ def scrape_b2b_leads_AT(industry, start_page, max_pages, batch_size=30):
         page.wait_for_selector('a.cmpboxbtnyes')
         page.click('a.cmpboxbtnyes')
 
-        while current_page < start_page + max_pages:
+        page.wait_for_selector("nav[aria-label='Seitennummerierung']")
+        page_numbers = page.locator("nav[aria-label='Seitennummerierung'] > div")
+        page_numbers = [int(num) for num in re.findall(r'aria-label="Seite (\d+)"', page_numbers.inner_html())]
+
+        # Get the maximum page number
+        max_pages = max(page_numbers) if page_numbers else None
+        while current_page < max_pages:
             try:
                 page.wait_for_selector('li[data-ht-label="company_impression"]')
                 li_elements = page.locator('li[data-ht-label="company_impression"]')
@@ -56,7 +62,7 @@ def scrape_b2b_leads_AT(industry, start_page, max_pages, batch_size=30):
                         continue
 
                 next_page_button = page.locator(f"a[href='https://www.herold.at/gelbe-seiten/{industry}/seite/{current_page + 1}/']").nth(0)
-                if next_page_button.is_visible() and current_page < start_page + max_pages:
+                if next_page_button.is_visible() and current_page < max_pages:
                     next_page_button.click()
                     current_page += 1
                 else:
@@ -68,21 +74,5 @@ def scrape_b2b_leads_AT(industry, start_page, max_pages, batch_size=30):
 
         browser.close()
 
-    if companies and emails:
-        save_leads_to_csv(companies, emails, industry=industry, country="AT")
 
 
-# Function to run multiple instances concurrently
-def run_parallel_scraping(industry, num_instances, max_pages_per_instance):
-    print("Scrapping data, please wait...")
-    start_pages = [1, 10, 20, 30, 40, 50, 60]  # Starting page for each instance
-    with ThreadPoolExecutor(max_workers=num_instances) as executor:
-        results = executor.map(lambda start_page: scrape_b2b_leads_AT(industry, start_page, max_pages_per_instance), start_pages)
-    # # Combine the results from all threads
-    # all_companies = []
-    # all_emails = []
-    # for companies, emails in results:
-    #     all_companies.extend(companies)
-    #     all_emails.extend(emails)
-    
-    # return all_companies, all_emails
