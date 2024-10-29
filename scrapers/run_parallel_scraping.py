@@ -13,5 +13,7 @@ def run_parallel_scraping(industry, country):
             executor.submit(scrape_b2b_leads_DK, industry)
         else:
             executor.submit(scrape_b2b_leads_EU, industry)
+            executor.submit(scrape_b2b_leads_AT, industry)
+            executor.submit(scrape_b2b_leads_DK, industry)
 
     print("Scraping completed.")

@@ -31,20 +31,6 @@ def scrape_b2b_leads_DK(industry):
             
         current_page = 1
 
-
-        resource_cache = False
-        def cache_resources(route, request):
-            if request.resource_type in ["stylesheet", "script"]:
-                # If the resource is cached, serve from the cache
-                if resource_cache:
-                    route.fulfill(status=200, body=resource_cache, headers=request.headers)
-                else:
-                    # Otherwise, fetch it once, then cache it
-                    response = route.continue_()
-                    resource_cache = response.body()
-            else:
-                route.continue_()
-
         while current_page < max_pages:
             try: 
                 page.wait_for_selector("div[data-guv-click='company_card']")
@@ -58,7 +44,6 @@ def scrape_b2b_leads_DK(industry):
                     company_url = company_link.get_attribute('href')
                     company_email = "N/A"
                     company_page = context.new_page()
-                    company_page.route("**/*", cache_resources)
                     company_page.goto(f"https://www.degulesider.dk{company_url}")
                     
                     try:
