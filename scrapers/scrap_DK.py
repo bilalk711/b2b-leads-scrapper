@@ -4,7 +4,7 @@ import re
 
 def scrape_b2b_leads_DK(industry):
     url = f"https://www.degulesider.dk/{industry}/firmaer"
-    batch_size=5
+    batch_size=50
     companies = []
     emails = []
     
@@ -14,7 +14,7 @@ def scrape_b2b_leads_DK(industry):
         context = browser.new_context(viewport={"width": 800, "height": 768})
         page = context.new_page()
 
-        page.route("**/*", lambda route, request: route.abort() if request.resource_type in ["image", "font", "stylesheet"] or "text/css" in request.headers.get("content-type", "") else route.continue_())
+        page.route("**/*", lambda route, request: route.abort() if request.resource_type in ["image", "font", "stylesheet", "javascript"] or "text/css" in request.headers.get("content-type", "") else route.continue_())
 
         page.goto(url)
         page.wait_for_selector('button[id="CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll"]')
@@ -30,6 +30,21 @@ def scrape_b2b_leads_DK(industry):
             print(f"Error getting max page number: {e}")
             
         current_page = 1
+
+
+        resource_cache = False
+        def cache_resources(route, request):
+            if request.resource_type in ["stylesheet", "script"]:
+                # If the resource is cached, serve from the cache
+                if resource_cache:
+                    route.fulfill(status=200, body=resource_cache, headers=request.headers)
+                else:
+                    # Otherwise, fetch it once, then cache it
+                    response = route.continue_()
+                    resource_cache = response.body()
+            else:
+                route.continue_()
+
         while current_page < max_pages:
             try: 
                 page.wait_for_selector("div[data-guv-click='company_card']")
@@ -43,8 +58,9 @@ def scrape_b2b_leads_DK(industry):
                     company_url = company_link.get_attribute('href')
                     company_email = "N/A"
                     company_page = context.new_page()
+                    company_page.route("**/*", cache_resources)
                     company_page.goto(f"https://www.degulesider.dk{company_url}")
-
+                    
                     try:
                         company_page.wait_for_selector("button[data-guv-click='company_email']", timeout=5000)  
                         if company_page.locator("button[data-guv-click='company_email']").is_visible():

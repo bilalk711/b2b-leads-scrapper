@@ -3,7 +3,7 @@ from scrapers.save_leads import save_leads_to_csv
 import re
 
 def scrape_b2b_leads_AT(industry):
-    batch_size = 5
+    batch_size = 50
     url = f"https://www.herold.at/gelbe-seiten/{industry}/seite/1/"
     companies = []
     emails = []
